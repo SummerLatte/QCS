@@ -205,6 +205,8 @@ def main():
                          'recorder_m': recorder_m,
                          'recorder': recorder}, is_best, args)
 
+        print('Training time: ' + datetime.datetime.now().strftime("%m-%d %H:%M"))
+
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
     losses = AverageMeter('Loss', ':.5f')
@@ -544,3 +546,4 @@ class RecorderMeter_loss(object):
 
 if __name__ == '__main__':
     main()
+
