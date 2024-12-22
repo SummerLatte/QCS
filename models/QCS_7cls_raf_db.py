@@ -182,8 +182,8 @@ class pyramid_trans_expr(nn.Module):
         self.VIT_cross = VisionTransformer(depth=1, drop_ratio=0, embed_dim=embed_dim)
 
         self.ir_back = Backbone(50, 0.0, 'ir')
-        ir_checkpoint = torch.load(r'.\models\pretrain\QCS_affect-8.pth', map_location=lambda storage, loc: storage)
-        #ir_checkpoint = torch.load(r'.\models\pretrain\ir50.pth', map_location=lambda storage, loc: storage)
+        # ir_checkpoint = torch.load(r'.\models\pretrain\QCS_affect-8.pth', map_location=lambda storage, loc: storage)
+        ir_checkpoint = torch.load(r'.\models\pretrain\ir50.pth', map_location=lambda storage, loc: storage)
 
         self.ir_back = load_pretrained_weights(self.ir_back, ir_checkpoint)
 

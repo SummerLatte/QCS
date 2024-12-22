@@ -1,0 +1,6 @@
+﻿.idea
+datas/RAF-DB
+datas/trainval_data_lists
+log_raf_db
+__pycache__
+models/pretrain

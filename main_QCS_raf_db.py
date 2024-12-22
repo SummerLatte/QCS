@@ -1,7 +1,8 @@
 import shutil
 import warnings
 from sklearn import metrics
-from sklearn.metrics import confusion_matrix, plot_confusion_matrix
+
+# from sklearn.metrics import confusion_matrix, plot_confusion_matrix
 warnings.filterwarnings("ignore")
 import torch.utils.data as data
 import os
@@ -13,6 +14,7 @@ import torch.utils.data
 import torch.utils.data.distributed
 
 import matplotlib
+
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 
@@ -28,8 +30,6 @@ from utils import *
 from torch.utils.checkpoint import checkpoint
 import seaborn as sns
 
-
-
 warnings.filterwarnings("ignore", category=UserWarning)
 
 now = datetime.datetime.now()
@@ -37,7 +37,7 @@ time_str = now.strftime("[%m-%d]-[%H-%M]-")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', default='RAF-DB', choices=['RAF-DB', 'AffectNet-7', 'FERPlus', 'AffectNet-8'],
-                        type=str, help='dataset option')
+                    type=str, help='dataset option')
 parser.add_argument('--checkpoint_path', type=str, default='./checkpoint_raf_db/' + time_str + 'model.pth')
 parser.add_argument('--best_checkpoint_path', type=str, default='./checkpoint_raf_db/' + time_str + 'model_best.pth')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N', help='number of data loading workers')
@@ -51,9 +51,9 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M')
 parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float, metavar='W', dest='weight_decay')
 parser.add_argument('-p', '--print-freq', default=100, type=int, metavar='N', help='print frequency')
 parser.add_argument('--resume', default=None, type=str, metavar='PATH', help='path to checkpoint')
-parser.add_argument('-e', '--evaluate', default=None, type=str, help='evaluate model on test set')
+parser.add_argument('-e', '--evaluate', default='models/pretrain/[12-14]-[23-47]-model_best.pth', type=str, help='evaluate model on test set')
 parser.add_argument('--beta', type=float, default=0.6)
-parser.add_argument('--gpu', type=str, default='1')
+parser.add_argument('--gpu', type=str, default='0')
 parser.add_argument('--num_classes', type=int, default=7)
 
 args = parser.parse_args()
@@ -64,14 +64,10 @@ def main():
     best_acc = 0
     print('Training time: ' + now.strftime("%m-%d %H:%M"))
 
-
-
     # create model
     model = pyramid_trans_expr(img_size=224, num_classes=args.num_classes)
 
     model = torch.nn.DataParallel(model).cuda()
-
-
 
     criterion = torch.nn.CrossEntropyLoss()
 
@@ -111,14 +107,14 @@ def main():
 
     data_transforms = {
         'train': transforms.Compose([transforms.Resize((224, 224)),
-            transforms.RandomHorizontalFlip(),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            transforms.RandomErasing(scale=(0.02, 0.1))]),
+                                     transforms.RandomHorizontalFlip(),
+                                     transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+                                     transforms.ToTensor(),
+                                     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                                     transforms.RandomErasing(scale=(0.02, 0.1))]),
         'test': transforms.Compose([transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),]),
+                                    transforms.ToTensor(),
+                                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]), ]),
     }
     '''
     data_transforms = {
@@ -138,16 +134,14 @@ def main():
     }
     '''
 
-
-
-    train_dataset = Dataset(train_root, train_pd, train=True, transform=data_transforms['train'], num_positive=1, num_negative=1)
+    train_dataset = Dataset(train_root, train_pd, train=True, transform=data_transforms['train'], num_positive=1,
+                            num_negative=1)
     test_dataset = Dataset(test_root, test_pd, train=False, transform=data_transforms['test'])
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers, pin_memory=True, collate_fn=collate_fn)
-    val_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers, pin_memory=True)
-
-
-
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers,
+                              pin_memory=True, collate_fn=collate_fn)
+    val_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers,
+                            pin_memory=True)
 
     if args.evaluate is not None:
         if os.path.isfile(args.evaluate):
@@ -174,7 +168,8 @@ def main():
             f.write('Current learning rate: ' + str(current_learning_rate) + '\n')
 
         # train for one epoch
-        train_los_1, train_los_2, train_los_3, train_los_4 = train(train_loader, model, criterion, optimizer, epoch, args)
+        train_los_1, train_los_2, train_los_3, train_los_4 = train(train_loader, model, criterion, optimizer, epoch,
+                                                                   args)
 
         # evaluate on validation set
         val_acc, val_los, output, target, D = validate(val_loader, model, criterion, args)
@@ -229,7 +224,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     for i, data in enumerate(train_loader):
 
         anchor_image, positive_image, negative_image, negative_image2, label, neg_label = data
-        #print(image.shape)
+        # print(image.shape)
         anchor_image = anchor_image.cuda()
         positive_image = positive_image.cuda()
         negative_image = negative_image.cuda()
@@ -239,7 +234,8 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         '''----------------------  first_step  ----------------------'''
         # compute output
-        output1, output2, output3, output4, output5, output6, output7, output8 = model(anchor_image, positive_image, negative_image, negative_image2)
+        output1, output2, output3, output4, output5, output6, output7, output8 = model(anchor_image, positive_image,
+                                                                                       negative_image, negative_image2)
 
         loss1 = criterion(output1, label)
         loss2 = criterion(output2, label)
@@ -258,19 +254,19 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         top1.update(acc1[0], anchor_image.size(0))
 
         # compute gradient and do SGD step
-        #optimizer.zero_grad()
+        # optimizer.zero_grad()
         loss.backward()
 
-        #for name, param in model.named_parameters():
+        # for name, param in model.named_parameters():
         #    if (name == "module.cross_attention_3.proj.weight"):
         #        print(f"Layer: {name}, Grad:{param.grad}")
-
 
         optimizer.first_step(zero_grad=True)
 
         '''----------------------  second_step  ----------------------'''
 
-        output1, output2, output3, output4, output5, output6, output7, output8 = model(anchor_image, positive_image, negative_image, negative_image2)
+        output1, output2, output3, output4, output5, output6, output7, output8 = model(anchor_image, positive_image,
+                                                                                       negative_image, negative_image2)
 
         loss1 = criterion(output1, label)
         loss2 = criterion(output2, label)
@@ -294,7 +290,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         losses_4.update(loss6.item(), anchor_image.size(0))
 
         # compute gradient and do SGD step
-        #optimizer.zero_grad()
+        # optimizer.zero_grad()
         loss.backward()
 
         optimizer.second_step(zero_grad=True)
@@ -307,7 +303,6 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
 
 def validate(val_loader, model, criterion, args):
-    
     losses = AverageMeter('Loss', ':.5f')
     top1 = AverageMeter('Accuracy', ':6.3f')
     progress = ProgressMeter(len(val_loader),
@@ -366,11 +361,13 @@ def validate(val_loader, model, criterion, args):
     print(D)
     return top1.avg, losses.avg, output, target, D
 
+
 def save_checkpoint(state, is_best, args):
     torch.save(state, args.checkpoint_path)
     if is_best:
-        #best_state = state.pop('optimizer')
+        # best_state = state.pop('optimizer')
         torch.save(state, args.best_checkpoint_path)
+
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -450,9 +447,8 @@ class RecorderMeter_matrix(object):
         self.y_true = target
 
     def plot_confusion_matrix(self, cm):
-
-        D_raf_norm = [[x*100 / sum(sublist) for x in sublist] for sublist in cm]
-        D_raf_text = [['{:.1f}%'.format(x*100 / sum(sublist)) for x in sublist] for sublist in cm]
+        D_raf_norm = [[x * 100 / sum(sublist) for x in sublist] for sublist in cm]
+        D_raf_text = [['{:.1f}%'.format(x * 100 / sum(sublist)) for x in sublist] for sublist in cm]
 
         fig_raf, ax_raf = plt.subplots()
         sns.heatmap(D_raf_norm, cmap='Blues', square=True, annot=D_raf_text, fmt='', cbar=False, ax=ax_raf,
@@ -465,7 +461,7 @@ class RecorderMeter_matrix(object):
         ax_raf.set_xlabel('Predicted', fontsize=10)
         ax_raf.set_ylabel('True', fontsize=10)
         ax_raf.set_title('RAF-DB', fontsize=12)
-        fig_raf.savefig('./log_raf_db/'+time_str+'-matrix.png', dpi=300)
+        fig_raf.savefig('./log_raf_db/' + time_str + '-matrix.png', dpi=300)
 
         print('Saved matrix')
 
@@ -480,7 +476,6 @@ class RecorderMeter_matrix(object):
         im_pre_label.transpose()
 
 
-
 class RecorderMeter_loss(object):
     """Computes and stores the minimum loss value and its epoch index"""
 
@@ -491,7 +486,7 @@ class RecorderMeter_loss(object):
         self.total_epoch = total_epoch
         self.current_epoch = 0
         self.epoch_losses = np.zeros((self.total_epoch, 4), dtype=np.float32)  # [epoch, train/val]
-        #self.epoch_accuracy = np.zeros((self.total_epoch, 4), dtype=np.float32)  # [epoch, train/val]
+        # self.epoch_accuracy = np.zeros((self.total_epoch, 4), dtype=np.float32)  # [epoch, train/val]
 
     def update(self, idx, train_loss_1, train_loss_2, train_loss_3, train_loss_4):
         self.epoch_losses[idx, 0] = train_loss_1
@@ -499,8 +494,8 @@ class RecorderMeter_loss(object):
         self.epoch_losses[idx, 2] = train_loss_3
         self.epoch_losses[idx, 3] = train_loss_4
 
-        #self.epoch_accuracy[idx, 0] = train_acc
-        #self.epoch_accuracy[idx, 1] = val_acc
+        # self.epoch_accuracy[idx, 0] = train_acc
+        # self.epoch_accuracy[idx, 1] = val_acc
         self.current_epoch = idx + 1
 
     def plot_curve(self, save_path):
@@ -541,15 +536,10 @@ class RecorderMeter_loss(object):
         plt.plot(x_axis, y_axis, color='y', linestyle='-', label='loss_cross_p', lw=3)
         plt.legend(loc=1, fontsize=legend_fontsize)
 
-
         if save_path is not None:
             fig.savefig(save_path, dpi=dpi, bbox_inches='tight')
             print('Saved figure')
         plt.close(fig)
-
-
-
-
 
 
 if __name__ == '__main__':
